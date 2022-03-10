@@ -67,4 +67,3 @@ Or the table of sample names uploaded for automatic ICON template creation
 | Sample 1  | 
 | Sample 2 | 
 
-## Contact
