@@ -20,8 +20,10 @@ R CMD INSTALL MoonNMR_1.0.0.tar.gz
 ```
 
 ---
+
 ## Start-Up
 There is only single function in the package -> run_moonnmr()
+
 To start:
 ```
 library(MoonNMR)
@@ -45,10 +47,19 @@ There is a example table in ~/app/examples, but it follows a very simple format:
 | ------------- | 
 | Sample 1  | 
 | Sample 2 | 
+
 The samples are automatically archived. The final table can be downloaded as .xlsx.
 #### Creator
 The creator function allows creation of a table sample by sample. Here a sample can be scanned or entered and the table will be built sample by sample.
 The final table can be downloaded as .xlsx.
+
+#### ICON Version
+The ICON version simply allows a direct input of solvents and experiments instead of pre-selected options. A list of experiments can be uploaded via the button, it requires a simple single column .csv file in the following style. Technically the entire experiment library can be downloaded from TOPSPIN and uploaded here.
+| Experiments|                 
+| ------------- | 
+| NOESY  | 
+| zg30 | 
+
 
 ## Proccessing Module
 ### Import .xml into csv
