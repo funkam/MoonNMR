@@ -1,5 +1,5 @@
 # MoonNMR 
-<img src="https://user-images.githubusercontent.com/88379260/157672281-8f3902d3-998e-48cc-a445-25dc17a42fa5.png" width="120" height="120" align="right">
+<img src="https://user-images.githubusercontent.com/88379260/157672281-8f3902d3-998e-48cc-a445-25dc17a42fa5.png" width="130" height="130" align="right">
 A Shiny application for high-throughput Nuclear Magnetic Resonance workflows
 
 MoonNMR is a Shiny application for the optimization of high-throughput NMR and <sup>1</sup>H Metabolomics workflows. 
