@@ -1,0 +1,41 @@
+---
+title: "MoonNMR"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{MoonNMR}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>"
+)
+```
+
+```{r setup}
+
+
+```
+
+---
+
+#### Local Server Version
+
+MoonNMR local version provides a similar experience as the online version hosted on shinyapps.io. In addition, the local version
+This local version only has a single function to call -\> run_moonnmr(). Dependencies are automatically installed, so no other setup is necessary.
+
+Simply run:
+
+    library(MoonNMR)
+    run_moonnmr()
+
+---
+
+For further information visit:
+https://github.com/funkam/MoonNMR
+
+For the web version visit: <https://funkam.shinyapps.io/MoonShiny/>
+
+---
