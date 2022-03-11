@@ -24,10 +24,18 @@ R CMD INSTALL MoonNMR_1.0.0.tar.gz
 ---
 
 ## Start-Up
-There is only single function in the package -> run_moonnmr()
+There are two single functions in the package. One for creating the archive files to be used and one to start the shiny application.
+The archive functions creates an archive in the current directory, it should be run before MoonNMR is started for the first time. It has a simple format. It can then be pre-populated with previous samples.
+
+Before first time start:
+```
+moonnmr_archivecreator()
+```
+
 
 To start:
 ```
+
 library(MoonNMR)
 run_moonnmr()
 ```
