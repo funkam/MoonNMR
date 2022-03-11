@@ -1,4 +1,4 @@
-#' The application User-Interface
+#' The application User-Interface and server
 #' 
 #' @param input,output,session Internal parameters for {shiny}. 
 #'     DO NOT REMOVE.
@@ -1230,14 +1230,16 @@ app_ui <-dashboardPage(
                 fluidRow(
                   column(width=4,
                   box(width=12,
-                    h1("MoonNMR - Shiny Edition"),
-                    h3(HTML("<b>M</b>etabol<b>O</b>mics <b>O</b>rga<b>N</b>iser NMR")),
-                    p("Tools for high-throughput NMR and untargeted Metabolomics"),
-                    p("No data is kept on the server, if you prefer to use the application locally check it out as a package on",a("GitHub.",href="https://github.com/funkam/MoonNMR")),
+                    h1("MoonNMR - Local Edition"),
+                    #img(src="https://user-images.githubusercontent.com/88379260/157672281-8f3902d3-998e-48cc-a445-25dc17a42fa5.png", height="20%",width="20%",align="left"),
+                    h3(HTML("<b>M</b>etabol<b>O</b>mics <b>O</b>rga<b>N</b>iser NMR"),align="left"),
+                    p("Tools for high-throughput NMR and untargeted Metabolomics",align="left"),
+                    br(),
+                    p("This is the local version of MoonNMR for the online version",a("click here",href="https://funkam.shinyapps.io/MoonShiny/")),
                     br(),
                     p("Developed by",a("Alexander Funk",href="https://www.uniklinikum-dresden.de/de/das-klinikum/kliniken-polikliniken-institute/klinische-chemie-und-laboratoriumsmedizin/forschung/copy_of_EMS")),
                     p("Institute for Clinical Chemistry and Laboratory Medicine"),
-                    p("University Hospital Dresden, Fetscherstr. 74, 01307 Dresden"),
+                    p("University Hospital Dresden, Fetscherstr. 74, 01307 Dresden")
                   ),
                   tabBox(width=12,title="Tools",
                          tabPanel(title="Preparation",
@@ -1676,9 +1678,7 @@ app_server <- function(input, output,session) {
 
 #Server Home----
   #create reactive archive, ->in excel tabs
-  archive<-reactive({read.csv("archive/archive.csv")})
-  #archiveoutptut
-
+  archive<-reactive({read.csv("archive.csv")})
   #Output
   output$archive<-DT::renderDataTable(archive())
   #output archive plots
@@ -1749,8 +1749,8 @@ app_server <- function(input, output,session) {
     new_archive<-rbind(archive_current,archive_updated)
   })
   observeEvent(input$archive, {
-    write.csv(archive(),"archive/archive_backup.csv",row.names=FALSE)
-    write.csv(archive_add(),"archive/archive.csv",row.names=FALSE)
+    write.csv(archive(),"archive_backup.csv",row.names=FALSE)
+    write.csv(archive_add(),"archive.csv",row.names=FALSE)
     showModal(modalDialog(
       title = "Important message",
       "The samples have been added to the archive."
@@ -1792,7 +1792,7 @@ app_server <- function(input, output,session) {
           m_path<-reactive({input$m_path})
           m_experiments<-reactive({input$m_experiment})
           m_project<-reactive({input$m_project})
-          m_archive<-reactive({read.csv("archive/archive.csv")})
+          m_archive<-reactive({read.csv("archive.csv")})
 
 
           m_elementpicker<-reactive({
@@ -1849,8 +1849,8 @@ app_server <- function(input, output,session) {
             } else {
               updateNumericInput(session, "m_slot", value = m_slot_counter)
             }
-            write.csv(m_archive(),"archive/archive_backup.csv",row.names=FALSE)
-            write.csv(m_archive_add(),"archive/archive.csv",row.names=FALSE)
+            write.csv(m_archive(),"archive_backup.csv",row.names=FALSE)
+            write.csv(m_archive_add(),"archive.csv",row.names=FALSE)
             m_looper<<-rbind(m_looper,manual_samples())
           })
           m_archive_add<-reactive({
@@ -1869,8 +1869,8 @@ app_server <- function(input, output,session) {
               }
             )
              observeEvent(input$m_archive, {
-               write.csv(m_archive(),"archive/archive_backup.csv",row.names=FALSE)
-               write.csv(m_archive_add(),"archive/archive.csv",row.names=FALSE)
+               write.csv(m_archive(),"archive_backup.csv",row.names=FALSE)
+               write.csv(m_archive_add(),"archive.csv",row.names=FALSE)
                showModal(modalDialog(
                  title = "Important message",
                  "The samples have been added to the archive."
@@ -1884,7 +1884,7 @@ app_server <- function(input, output,session) {
              i_path<-reactive({input$i_path})
              i_experiments<-reactive({input$i_experiment})
              i_project<-reactive({input$project})
-             i_archive<-reactive({read.csv("archive/archive.csv")})
+             i_archive<-reactive({read.csv("archive.csv")})
 
 
 
@@ -1952,8 +1952,8 @@ app_server <- function(input, output,session) {
                new_archive<-rbind(archive_current,archive_updated)
              })
              observeEvent(input$i_archive, {
-               write.csv(i_archive(),"archive/archive_backup.csv",row.names=FALSE)
-               write.csv(i_archive_add(),"archive/archive.csv",row.names=FALSE)
+               write.csv(i_archive(),"archive_backup.csv",row.names=FALSE)
+               write.csv(i_archive_add(),"archive.csv",row.names=FALSE)
                showModal(modalDialog(
                  title = "Important message",
                  "The samples have been added to the archive."
@@ -1982,7 +1982,7 @@ app_server <- function(input, output,session) {
              im_path<-reactive({input$im_path})
              im_experiments<-reactive({input$im_experiment})
              im_project<-reactive({input$im_project})
-             im_archive<-reactive({read.csv("archive/archive.csv")})
+             im_archive<-reactive({read.csv("archive.csv")})
 
              im_experimentlist<-reactive({
                inFile <- input$im_file2
@@ -2048,8 +2048,8 @@ app_server <- function(input, output,session) {
                } else {
                  updateNumericInput(session, "im_slot", value = im_slot_counter)
                }
-               write.csv(im_archive(),"archive/archive_backup.csv",row.names=FALSE)
-               write.csv(im_archive_add(),"archive/archive.csv",row.names=FALSE)
+               write.csv(im_archive(),"archive_backup.csv",row.names=FALSE)
+               write.csv(im_archive_add(),"archive.csv",row.names=FALSE)
                im_looper<<-rbind(im_looper,im_manual_samples())
              })
 
