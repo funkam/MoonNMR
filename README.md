@@ -3,7 +3,7 @@
 A Shiny application for high-throughput Nuclear Magnetic Resonance workflows
 
 MoonNMR is a Shiny application for the optimization of high-throughput NMR and <sup>1</sup>H Metabolomics workflows. 
-The application is designed primarily to be used with the Bruker BioSpin Avance IVDr (and methods), and a SampleJet sample robot. MoonNMR provides for tools for easier template creation, as well as data extraction tools and a series of analysis tools. However, the tools can also be used by other users
+The application is designed primarily to be used with the Bruker BioSpin Avance IVDr (and methods), and a SampleJet sample robot. MoonNMR provides for tools for easier template creation, as well as data extraction tools and a series of analysis tools. However, the tools can also be used by other users.
 
 ---
 ## Installation
@@ -95,6 +95,10 @@ Suggested grouped plots (e.g. Lipid-Subclasses involving Triglycerides) are also
 ## Differences to Web-Version
 ### Archive
 The main difference to the web version of MoonNMR is that allows archiving of submitted samples, using a file called archive.csv found in the libary folder. A backup is also created for every submission. There is an overview plot embedded on the main page detailing amount of samples measured and contribution of each project to the overall count.
+Before first use it is necessary to create the archive files in the local directory. Simply use:
+```
+moonnmr_archivecreator()
+```
 
 
 
