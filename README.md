@@ -12,7 +12,7 @@ The application is designed primarily to be used with the Bruker BioSpin Avance 
 #### Option 1: Via Github
 ```
 library(devtools)
-devtools::install_github("funkam/MoonNMR")
+devtools::install_github("funkam/MoonNMR",build = TRUE, build_vignettes = TRUE)
 ```
 
 #### Option 2: Download .tar.gz [here](https://drive.google.com/file/d/1iAUxgL9HdxZ7EBpT8dv8WB1tFJFtOCJe/view?usp=sharing)
