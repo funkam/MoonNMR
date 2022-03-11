@@ -24,16 +24,22 @@ knitr::opts_chunk$set(
 #### Local Server Version
 
 MoonNMR local version provides a similar experience as the online version hosted on shinyapps.io. In addition, the local version
-This local version only has a single function to call -\> run_moonnmr(). Dependencies are automatically installed, so no other setup is necessary.
+This local version uses a single function to call -\> run_moonnmr(). Dependencies are automatically installed.
+Before running MoonNMR the first time, it is recommended to run the function
+```
+moonnmr_archivecreator()
+```
+This creates the necessary archive files. Afterwards the table can also be populated with previous samples.
+
 
 Simply run:
-
+```
     library(MoonNMR)
     run_moonnmr()
-
+```
 ---
 
-For further information visit:
+For detailed information visit:
 https://github.com/funkam/MoonNMR
 
 For the web version visit: <https://funkam.shinyapps.io/MoonShiny/>
