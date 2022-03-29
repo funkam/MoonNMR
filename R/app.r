@@ -2,7 +2,15 @@
 #' 
 #' @param input,output,session Internal parameters for {shiny}. 
 #'     DO NOT REMOVE.
-#' @import shiny shinydashboard shinyWidgets plotly ggplot2 openxlsx WriteXLS waiter ggpubr reshape2 fastmatch ggthemes xml2 janitor stringr dplyr tidyr 
+#' @import shiny shinydashboard shinyWidgets plotly ggplot2 waiter ggpubr reshape2 fastmatch ggthemes xml2  dplyr tidyr
+#' @importFrom WriteXLS WriteXLS
+#' @importFrom openxlsx read.xlsx
+#' @importFrom stringr str_c str_detect
+#' @importFrom janitor clean_names
+#' @importFrom stats prcomp
+#' @importFrom utils read.csv read.csv2 unzip write.csv
+#' @importFrom grDevices dev.off pdf
+#' 
 #' @noRd
 #Load Packages------------
   # library(shiny)
@@ -23,6 +31,7 @@
   # library(fastmatch)
   # library(ggthemes)
   # library(xml2)
+  # library(ggfortify)
 
 #data-----------
 # Date<-c("24/02/2022","18/02/2022","14/02/2022")
@@ -684,7 +693,7 @@ excel_creator<-function(data,solvent,size,rack,experiments,path){
   # data_final<-sort(data_final$dataorder)
   # data_final=subset(data_final,select=-c(dataorder))
   data_final<-data_final[,c(1,2,3,6,4,5)]
-  data_final<<-data_final
+  data_final<-data_final
 }
 #SCRIPT Extractor----
 clean_csv<-function(names,data){
@@ -1155,19 +1164,26 @@ app_ui <-dashboardPage(
   dashboardHeader(title="MoonNMR"),
   dashboardSidebar(
      sidebarMenu(collapsed=FALSE,
-              menuItem("Home", tabName = "home", icon = icon("home"),selected=T),
-              menuItem("Preparation",icon=icon("dolly"),
-                      menuSubItem("IVDr Upload", tabName = "creator", icon = icon("truck")),
-                      menuSubItem("IVDr Manual", tabName = "manual", icon = icon("people-carry")),
-                      menuSubItem("ICON Upload", tabName = "iconup", icon = icon("car-side")),
-                      menuSubItem("ICON Manual", tabName = "iconman", icon = icon("wrench"))),
-              menuItem("Processing", icon=icon("bacon"),
-                       menuSubItem("XML Extractor", tabName = "xml", icon = icon("file-import")),
-                       menuSubItem("Bruker File Extractor", tabName = "extractor", icon = icon("crow")),
-                       menuSubItem("Table Combiner",tabName="combiner",icon=icon("handshake"))),
-              menuItem("Analysis",icon=icon("flask"),
-                       menuSubItem("Normalize", tabName = "normalizer", icon = icon("balance-scale-right")),
-                       menuSubItem("Plots", tabName = "plots", icon = icon("chart-bar")))
+                 menuItem("Home", tabName = "home", icon = icon("home"),selected=T),
+                 menuItem("Preparation",icon=icon("dolly"),
+                          menuSubItem("IVDr Upload", tabName = "creator", icon = icon("truck")),
+                          menuSubItem("IVDr Manual", tabName = "manual", icon = icon("people-carry")),
+                          menuSubItem("ICON Upload", tabName = "iconup", icon = icon("car-side")),
+                          menuSubItem("ICON Manual", tabName = "iconman", icon = icon("wrench"))
+                 ),
+                 menuItem("Extraction", icon=icon("bacon"),
+                          menuSubItem("XML", tabName = "xml", icon = icon("file-import")),
+                          menuSubItem("Bruker File", tabName = "extractor", icon = icon("crow"))
+                 ),
+                 menuItem("Manipulation", icon=icon("table"),
+                          menuSubItem("Delete",tabName="deleter",icon=icon("trash")),
+                          menuSubItem("Combine",tabName="combiner",icon=icon("handshake"))
+                 ),
+                 menuItem("Analysis",icon=icon("flask"),
+                          menuSubItem("Normalize", tabName = "normalizer", icon = icon("balance-scale-right")),
+                          menuSubItem("Bar Plots", tabName = "plots", icon = icon("chart-bar")),
+                          menuSubItem("PCA", tabName = "pca", icon = icon("chart-area"))
+                 )
     )
   ),
   dashboardBody(
@@ -1503,6 +1519,74 @@ app_ui <-dashboardPage(
                   )
                   )
           ),
+      #deleter----
+      tabItem(tabName = "deleter",
+              fluidRow(
+                box(width=3,title="Upload data:",status="primary",solidHeader=TRUE,
+                    radioGroupButtons("del_file_type_Input","Choose File type",
+                                      choices = list(".csv/txt" = 1, ".xlsx" = 2),
+                                      selected = 1
+                    ),
+                    fileInput("del_file", "File input", multiple=FALSE),
+                ),
+                box(width=4,title="Options:",status="primary",solidHeader=TRUE,
+                    p("Select type:"),
+                    tabBox(width=12,selected="Parameter",
+                           tabPanel("Parameter",
+                                    pickerInput("del_column", "Choose parameters (columns) to delete",
+                                                choices=c(),
+                                                options=list("actions-box"=TRUE, size=15,`selected-text-format` = "count > 3"
+                                                ),multiple=TRUE
+                                    )
+                           ),
+                           tabPanel("Sample",
+                                    pickerInput("del_irow", "Choose identifier column (e.g. SampleID)",
+                                                choices=c(""),
+                                                options=list("actions-box"=TRUE, size=15,`selected-text-format` = "count > 3"
+                                                ),multiple=FALSE
+                                    ),
+                                    pickerInput("del_row", "Choose samples (rows) to delete",
+                                                choices=c(),
+                                                options=list("actions-box"=TRUE, size=15,`selected-text-format` = "count > 3"
+                                                ),multiple=TRUE
+                                    )
+                                    
+                           ),
+                           tabPanel("Group",
+                                    pickerInput("del_igroup", "Choose identifier column (e.g. Group)",
+                                                choices=c(),
+                                                options=list("actions-box"=TRUE, size=15,`selected-text-format` = "count > 3"
+                                                ),multiple=FALSE
+                                    ),
+                                    pickerInput("del_group", "Choose groups to delete",
+                                                choices=c(),
+                                                options=list("actions-box"=TRUE, size=15,`selected-text-format` = "count > 3"
+                                                ),multiple=TRUE
+                                    )
+                           )
+                    )
+                ),
+                box(width=2,title="Download:",status="primary",solidHeader=TRUE,
+                    downloadButton("del_downloader","Download table"),
+                ),
+                box(width=5, background="black",color="yellow",
+                    p("Upload a data table and edit the parameters, samples and groups interactively."),
+                    p("Multiple edits possible at the same time.")
+                    
+                )
+              ),
+              
+              fluidRow(
+                box(width=12, title="Output",status="primary",solidHeader=TRUE,
+                    div(style = 'overflow-x: scroll',  DT::dataTableOutput('del_table'))
+                )
+              )
+              
+      ),
+      
+      
+      
+      
       #Combiner-----
       tabItem(tabName="combiner",
               fluidRow(
@@ -1661,8 +1745,51 @@ app_ui <-dashboardPage(
                     div(style = 'overflow-x: scroll',DT::dataTableOutput("p_exampletable"))
                 )
               )
-
-
+      ),
+      
+    #PCA----
+      tabItem(tabName="pca",
+              h2("Principal Component Analysis"),
+              fluidRow(
+                box(width=3,title="Upload data:",status="primary",solidHeader=TRUE,
+                    radioGroupButtons("pca_file_type_Input","Choose File type",
+                                      choices = list(".csv/txt" = 1, ".xlsx" = 2),
+                                      selected = 1
+                    ),
+                    fileInput("pca_file", "File input", multiple=FALSE),
+                    pickerInput("pca_id", "Select Sample ID column",
+                                choices=c(),
+                                options=list("actions-box"=TRUE, size=15,`selected-text-format` = "count > 3"
+                                ),
+                                multiple=FALSE,selected=c()),
+                    pickerInput("pca_group", "Select Group column",
+                                choices=c(),
+                                options=list("actions-box"=TRUE, size=15,`selected-text-format` = "count > 3"
+                                ),
+                                multiple=FALSE,selected=NULL),
+                    radioGroupButtons("pca_labels","Include labels in plot",
+                                      choices=c("Yes"="pca_labels_yes","No"="pca_labels_no"),
+                                      selected="pca_labels_no"),
+                    hr(),
+                    downloadButton("pca_download","Download PCA table")
+                ),
+                tabBox(width=9,selected="Data Table",
+                       tabPanel("Data Table",
+                                div(style = 'overflow-x: scroll',DT::dataTableOutput("pca_table"))
+                       ),
+                       tabPanel("PCA",
+                                div(style = 'overflow-x: scroll',DT::dataTableOutput("pca_pca"))
+                       )
+                )
+              ),
+              fluidRow(
+                box(width=6, status="primary",solidHeader=TRUE,title="PCA Scores",
+                    plotlyOutput(width="90%","pca_scores")
+                ),
+                box(width=6, status="primary",solidHeader=TRUE,title="PCA Biplot",
+                    plotlyOutput(width="90%","pca_biplot")
+                )
+              )
       )
   )
   )
@@ -1674,7 +1801,7 @@ app_ui <-dashboardPage(
 
 
 # Server----
-app_server <- function(input, output,session) {
+app_server <- function(input,output,session) {
 
 #Server Home----
   #create reactive archive, ->in excel tabs
@@ -2146,7 +2273,124 @@ app_server <- function(input, output,session) {
               write.csv(cleaned_csv(), file, row.names = FALSE)
             }
           )
-          #Server Combiner----
+#Server Deleter----
+          del_file <- reactive({
+            del_inFile <- input$del_file
+            if (is.null(del_inFile))
+              return(NULL)
+            if (input$del_file_type_Input == "1") {
+              read.csv(del_inFile$datapath,
+                                   header = TRUE,
+                                   stringsAsFactors = FALSE)
+            } else {
+              read.xlsx(del_inFile$datapath)
+            }
+          })
+          
+          del_columns<-reactive({input$del_column})
+          del_rows<-reactive({input$del_row})
+          del_irows<-reactive({input$del_irow})
+          del_groups<-reactive({input$del_group})
+          del_igroups<-reactive({input$del_igroup})
+          samplerows<-reactive({
+            req(del_irows())
+            dat<-subset(del_file(),select=names(del_file()) %in% del_irows())
+          })
+          grouprows<-reactive({
+            req(del_igroups())
+            dat<-subset(del_file(),select=names(del_file()) %in% del_igroups())
+            dat<-unique(dat)
+          })
+          #update picks
+          
+          del_column<-observe({
+            updatePickerInput(
+              session,
+              "del_column",
+              choices = names(del_file())
+              
+            )
+          })
+          del_irow<-observe({
+            updatePickerInput(
+              session,
+              "del_irow",
+              choices = names(del_file())
+              
+            )
+          })
+          del_row<-observe({
+            req(input$del_file)
+            req(del_irows())
+            
+            updatePickerInput(
+              session,
+              "del_row",
+              choices = samplerows()
+              
+            )
+          })
+          del_igroup<-observe({
+            updatePickerInput(
+              session,
+              "del_igroup",
+              choices = names(del_file())
+              
+            )
+          })
+          del_group<-observe({
+            req(input$del_file)
+            req(del_igroups())
+            updatePickerInput(
+              session,
+              "del_group",
+              choices = grouprows()
+            )
+          })
+          # del_table<-reactive({
+          #   req(input$del_file)
+          #
+          #   if(length(del_columns()!=0)){
+          #     "%ni%"<-Negate('%in%')
+          #     del_final<-subset(del_file(),select=names(del_file()) %ni% del_columns())
+          #   }
+          
+          
+          # })
+          del_table<-reactive({
+            req(input$del_file)
+            del_final<-del_file()
+            if(sjmisc::is_empty(del_columns())==FALSE){
+              "%ni%"<-Negate('%in%')
+              del_final<-subset(del_final,select=names(del_final) %ni% del_columns())
+            }
+            if(sjmisc::is_empty(del_rows())==FALSE){
+              irows<-as.name(del_irows())
+              rows<-paste(del_rows(),collapse="|")
+              del_final<-del_final %>% filter(!str_detect(!!as.symbol(irows),rows))
+            }
+            if(sjmisc::is_empty(del_groups())==FALSE){
+              igroup<-as.name(del_igroups())
+              group<-del_groups()
+              del_final<-del_final %>% filter(!str_detect(!!as.symbol(igroup),group))
+            }
+            del_final<-del_final
+          })
+          
+          #output
+          output$del_table<-DT::renderDataTable(del_table())
+          
+          
+          output$del_downloader <- downloadHandler(
+            filename = function() {
+              paste("Data_", ".csv", sep = "")
+            },
+            content = function(file) {
+              write.csv(del_table(), file, row.names = FALSE)
+            }
+          )
+          
+#Server Combiner----
           c_fileleft <- reactive({
             inFilel <- input$c_fileleft
             if (is.null(inFilel))
@@ -2276,15 +2520,15 @@ app_server <- function(input, output,session) {
 #Server Plotting Tab----
         #input
         p_file <- reactive({
-           inFile <- input$p_file
-           if (is.null(inFile))
+           p_inFile <- input$p_file
+           if (is.null(p_inFile))
              return(NULL)
            if (input$p_file_type_Input == "1") {
-             clean_names(read.csv(inFile$datapath,
+             read.csv(p_inFile$datapath,
                       header = TRUE,
-                      stringsAsFactors = FALSE))
+                      stringsAsFactors = FALSE)
            } else {
-             clean_names(read.xlsx(inFile$datapath))
+             read.xlsx(p_inFile$datapath)
            }
          })
 
@@ -2310,7 +2554,7 @@ app_server <- function(input, output,session) {
           )
         })
     #outputs
-         output$p_exampletable<-renderDataTable({
+         output$p_exampletable<-DT::renderDataTable({
            req(input$p_file)
            p_file()
          })
@@ -2338,6 +2582,95 @@ app_server <- function(input, output,session) {
                 type = "success"
               )
               })
+#server PCA----
+          pca_file <- reactive({
+            inFile <- input$pca_file
+            if (is.null(inFile))
+              return(NULL)
+            if (input$p_file_type_Input == "1") {
+              read.csv(inFile$datapath,
+                                   header = TRUE,
+                                   stringsAsFactors = FALSE)
+            } else {
+              read.xlsx(inFile$datapath)
+            }
+          })
+          pca_ids<-reactive({input$pca_id})
+          pca_labels<-reactive({switch(input$pca_labels, "pca_labels_yes"="Yes","pca_labels_no"="No")})
+          
+          pca_groups<-reactive({input$pca_group})
+          #update picks
+          pca_group<-observe({
+            updatePickerInput(
+              session,
+              "pca_group",
+              choices = names(pca_file())
+            )
+          })
+          pca_id<-observe({
+            updatePickerInput(
+              session,
+              "pca_id",
+              choices = names(pca_file())
+            )
+          })
+          #pccomp
+          pca_calc<-reactive({
+            pca_data<-pca_file()
+            idloc<-grep(pca_ids(),colnames(pca_data))
+            row.names(pca_data)<-pca_data[,idloc]
+            pca_data<-pca_data[-idloc]
+            #pca_columns<-c(pca_groups(),pca_columns())
+            #pca_data<-select(pca_data,all_of(pca_columns()))
+            pca_data[pca_data==0]<-NA
+            nums<-unlist(lapply(pca_data,is.numeric))
+            pca_obj<-prcomp(pca_data[,nums],center=TRUE,scale.=TRUE)
+          })
+          pca_table<-reactive({
+            req(input$pca_file)
+            pca<-fortify(pca_calc(),data=pca_file())
+            dfcols<-ncol(pca_file())
+            pca<-pca[,-(1:dfcols),drop=FALSE]
+            pca = pca %>% `rownames<-`( NULL )
+          })
+          #pca_score
+          output$pca_scores<-renderPlotly({
+            req(input$pca_file,input$pca_id,input$pca_group)
+            if(pca_labels()=="Yes"){
+              pca_scores<-autoplot(pca_calc(), data=pca_file(),colour=pca_groups(),frame=TRUE,frame.type="norm",size=2,label=TRUE)+theme_few()+theme(legend.position="bottom")+scale_fill_gdocs()
+            } else {
+              pca_scores<-autoplot(pca_calc(), data=pca_file(),colour=pca_groups(),frame=TRUE,frame.type="norm",size=2)+theme_few()+theme(legend.position="bottom")+scale_fill_gdocs()
+            }
+            ggplotly(pca_scores) %>%
+              layout(showlegend = TRUE, legend = list(font = list(size = 15)))
+          })
+          
+          
+          #pca_biplot
+          output$pca_biplot<-renderPlotly({
+            req(input$pca_file,input$pca_id,input$pca_group)
+            pca_biplot<-autoplot(pca_calc(), data=pca_file(),colour=pca_groups(),loadings=TRUE,loadings.label=TRUE,loadings.label.size=3)+theme_few()+theme(legend.position="none")+scale_fill_gdocs()
+            ggplotly(pca_biplot) %>%
+              layout(showlegend = TRUE, legend = list(font = list(size = 15)))
+          })
+          output$pca_table<-DT::renderDataTable({
+            req(input$pca_file)
+            pca_file()
+          })
+          output$pca_pca<-DT::renderDataTable({
+            req(input$pca_file)
+            pca_table()
+            #row.names(pca)<-NULL
+          })
+          output$pca_download <- downloadHandler(
+            filename = function() {
+              paste("PCA_", ".csv", sep = "")
+            },
+            content = function(file) {
+              write.csv(pca_table(), file, row.names = FALSE)
+            }
+          )
+          
 }
 
 # Run the app ----
