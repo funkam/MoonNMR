@@ -1,36 +1,88 @@
-#' The application User-Interface
+#' The application User-Interface and server
 #' 
 #' @param input,output,session Internal parameters for {shiny}. 
 #'     DO NOT REMOVE.
-#' @import shiny shinydashboard shinyWidgets plotly ggplot2 openxlsx WriteXLS waiter ggpubr reshape2 fastmatch ggthemes xml2 janitor stringr dplyr tidyr 
+#' @import shiny shinydashboard shinyWidgets plotly ggplot2 waiter ggpubr reshape2 fastmatch xml2 dplyr tidyr ggfortify
+#' @importFrom WriteXLS WriteXLS
+#' @importFrom openxlsx read.xlsx
+#' @importFrom stringr str_c str_detect
+#' @importFrom janitor clean_names
+#' @importFrom stats prcomp
+#' @importFrom utils read.csv read.csv2 unzip write.csv
+#' @importFrom grDevices dev.off pdf
+#' 
 #' @noRd
-#Load Packages------------
-  # library(shiny)
-  # library(shinydashboard)
-  # library(shinyWidgets)
-  # library(plotly)
-  # library(janitor)
-  # library(ggplot2)
-  # library(stringr)
-  # library(dplyr)
-  # library(tidyr)
-  # library(DT)
-  # library(openxlsx)
-  # library(WriteXLS)
-  # library(waiter)
-  # library(ggpubr)
-  # library(reshape2)
-  # library(fastmatch)
-  # library(ggthemes)
-  # library(xml2)
 
-#data-----------
-# Date<-c("24/02/2022","18/02/2022","14/02/2022")
-# Version<-c("0.3","0.2","0.1")
-# Comment<-c("Added xml extractor tool","Scripts further adapted to server use.","First stable release. Fully ShinyServer functional.")
-# changelog<-data.frame(Date,Version,Comment)
+
 startProjects<-c()
-#read.csv("project_list.csv")
+#Script group_plotter----
+plotter_grouped<-function(data,group,columns,stats) {
+  data[data==0] <- NA
+  columns<-c(group,columns)
+  data<-select(data,all_of(columns))
+  metabolites<-names(data)
+  varx<-metabolites[1]
+  
+  
+  if(stats=="none"){
+    pltg<- lapply(seq_len(ncol(data)), FUN = function(x) {
+      ggplot(data,aes(x = .data[[varx]], y = data[ , x],inheriet.aes=FALSE,fill=.data[[varx]],group=.data[[varx]])) +
+        geom_boxplot()+
+        theme_classic()+
+        theme(legend.position="none",axis.text.x=element_text(angle=45,hjust=1))+
+        labs(x="", y="", title = colnames(data)[x])
+    })
+  }
+  if(stats=="ttest"){
+    pltg<- lapply(seq_len(ncol(data)), FUN = function(x) {
+      ggplot(data,aes(x = .data[[varx]], y = data[ , x],inheriet.aes=FALSE,fill=.data[[varx]],group=.data[[varx]])) +
+        geom_boxplot()+
+        theme_classic()+
+        theme(legend.position="none",axis.text.x=element_text(angle=45,hjust=1))+
+        labs(x="", y="", title = colnames(data)[x])+
+        stat_compare_means(method="t.test",aes(label=..p.signif..),hide.ns = TRUE)
+    })
+  }
+  if(stats=="wilcox"){
+    pltg<- lapply(seq_len(ncol(data)), FUN = function(x) {
+      ggplot(data,aes(x = .data[[varx]], y = data[ , x],inheriet.aes=FALSE,fill=.data[[varx]],group=.data[[varx]])) +
+        geom_boxplot()+
+        theme_classic()+
+        theme(legend.position="none",axis.text.x=element_text(angle=45,hjust=1))+
+        labs(x="", y="", title = colnames(data)[x])+
+        stat_compare_means(method="wilcox.text",aes(label=..p.signif..),hide.ns = TRUE)
+      
+    })
+  }
+  if(stats=="anova"){
+    pltg<- lapply(seq_len(ncol(data)), FUN = function(x) {
+      ggplot(data,aes(x = .data[[varx]], y = data[ , x],inheriet.aes=FALSE,fill=.data[[varx]],group=.data[[varx]])) +
+        geom_boxplot()+
+        theme_classic()+
+        theme(legend.position="none",axis.text.x=element_text(angle=45,hjust=1))+
+        labs(x="", y="", title = colnames(data)[x])+
+        stat_compare_means(method="anova",aes(label=..p.signif..),hide.ns = TRUE)
+    })
+  }
+  if(stats=="kruskal"){
+    pltg<- lapply(seq_len(ncol(data)), FUN = function(x) {
+      ggplot(data,aes(x = .data[[varx]], y = data[ , x],inheriet.aes=FALSE,fill=.data[[varx]],group=.data[[varx]])) +
+        geom_boxplot()+
+        theme_classic()+
+        theme(legend.position="none",axis.text.x=element_text(angle=45,hjust=1))+
+        labs(x="", y="", title = colnames(data)[x])+
+        stat_compare_means(method="kruskal.text",aes(label=..p.signif..),hide.ns = TRUE)
+    })
+  }
+  pltg<-pltg[-1]
+  plot_combined<-ggarrange(plotlist=pltg)
+  plot<-append(plot,list(plot_combined))
+}
+
+
+
+
+
 
 #Script xmler----
 xmler<-function(data2,type){
@@ -132,62 +184,20 @@ xmler<-function(data2,type){
 #Script Plotter_single-----
 plotter_single<-function(data,group,column,grouped,stat){
 
-  data_original<-data
+  ata_original<-data
   if(length(column)>1){
     column<-column[1]
   }
   columns<-c(group,column)
   data<-select(data,all_of(columns))
   data[data==0] <- NA
-
-  if(stat=="none"){
-    plot<-ggplot(data,aes(x = data[ ,group], y = data[ ,column],inheriet.aes=FALSE,group= data[ ,group],fill= data[ ,group])) +
-      geom_boxplot()+
-      theme_few()+
-      theme(legend.position="none")+
-      labs(x="", y="", title = column)+
-      scale_fill_gdocs()
-  }
-  if(stat=="ttest"){
-    plot<-ggplot(data,aes(x = data[ ,group], y = data[ ,column],inheriet.aes=FALSE,group= data[ ,group],fill= data[ ,group])) +
-      geom_boxplot()+
-      theme_few()+
-      theme(legend.position="none")+
-      labs(x="", y="", title = column)+
-      scale_fill_gdocs()+
-      stat_compare_means(method="t.test",aes(label=..p.signif..),hide.ns = TRUE)
-
-  }
-  if(stat=="anova"){
-    plot<-ggplot(data,aes(x = data[ ,group], y = data[ ,column],inheriet.aes=FALSE,group= data[ ,group],fill= data[ ,group])) +
-      geom_boxplot()+
-      theme_few()+
-      theme(legend.position="none")+
-      labs(x="", y="", title = column)+
-      scale_fill_gdocs()+
-      stat_compare_means(method="anova",aes(label=..p.signif..),hide.ns = TRUE)
-  }
-  if(stat=="wilcox"){
-    plot<-ggplot(data,aes(x = data[ ,group], y = data[ ,column],inheriet.aes=FALSE,group= data[ ,group],fill= data[ ,group])) +
-      geom_boxplot()+
-      theme_few()+
-      theme(legend.position="none")+
-      labs(x="", y="", title = column)+
-      scale_fill_gdocs()+
-      stat_compare_means(method="wilcox.test",aes(label=..p.signif..),hide.ns = TRUE)
-  }
-
-  if(stat=="kruskal"){
-    plot<-ggplot(data,aes(x = data[ ,group], y = data[ ,column],inheriet.aes=FALSE,group= data[ ,group],fill= data[ ,group])) +
-      geom_boxplot()+
-      theme_few()+
-      theme(legend.position="none")+
-      labs(x="", y="", title = column)+
-      scale_fill_gdocs()+
-      stat_compare_means(method="kruskal.test",aes(label=..p.signif..),hide.ns = TRUE)
-  }
+  #if length ofcolumn vector >1 then show message....
+    plot<-ggplot(data,aes(x = data[ ,group], y = data[ ,column],inherit.aes=FALSE,group= data[ ,group],fill= data[ ,group])) +
+    geom_boxplot()+
+    theme_classic()+
+    theme(legend.position="none")+
+    labs(x="", y="", title = column)
   plot<-plot
-
 }
 #SCRIPT ExperimentPicker----
 experimentpicker<-function(solvent,size){
@@ -236,207 +246,74 @@ experimentpicker<-function(solvent,size){
 }
 
 #SCRIPT Plotter----
-plotter_v2<-function(data,group,columns,grouped,stat){
+plotter_v2<-function(data,group,columns,stat){
   data_original<-data
   columns<-c(group,columns)
   data<-select(data,all_of(columns))
   data[data==0] <- NA
   metabolites<-names(data)
   varx<-metabolites[1]
-
+  
   if(stat=="none"){
     plot <- lapply(seq_len(ncol(data)), FUN = function(x) {
-      ggplot(data,aes(x = .data[[varx]], y = data[ , x],inheriet.aes=FALSE,fill=.data[[varx]],group=.data[[varx]])) +
+      ggplot(data,aes(x = .data[[varx]], y = data[ , x],inherit.aes=FALSE,fill=.data[[varx]],group=.data[[varx]])) +
         geom_boxplot()+
-        theme_few()+
+        theme_classic()+
         theme(legend.position="none")+
-        labs(x="", y="", title = colnames(data)[x])+
-        scale_fill_gdocs()
+        stat_boxplot(geom="errorbar",width=0.2)+
+        labs(x="", y="", title = colnames(data)[x])
     })
   }
   if(stat=="ttest"){
     plot <- lapply(seq_len(ncol(data)), FUN = function(x) {
-      ggplot(data,aes(x = .data[[varx]], y = data[ , x],inheriet.aes=FALSE,fill=.data[[varx]],group=.data[[varx]])) +
+      ggplot(data,aes(x = .data[[varx]], y = data[ , x],inherit.aes=FALSE,fill=.data[[varx]],group=.data[[varx]])) +
         geom_boxplot()+
-        theme_few()+
+        theme_classic()+
         theme(legend.position="none")+
         labs(x="", y="", title = colnames(data)[x])+
-        scale_fill_gdocs()+
+        stat_boxplot(geom="errorbar",width=0.2)+
         stat_compare_means(method="t.test",aes(label=..p.signif..),hide.ns = TRUE)
     })
+    
   }
   if(stat=="anova"){
     plot <- lapply(seq_len(ncol(data)), FUN = function(x) {
-      ggplot(data,aes(x = .data[[varx]], y = data[ , x],inheriet.aes=FALSE,fill=.data[[varx]],group=.data[[varx]])) +
+      ggplot(data,aes(x = .data[[varx]], y = data[ , x],inherit.aes=FALSE,fill=.data[[varx]],group=.data[[varx]])) +
         geom_boxplot()+
-        theme_few()+
+        theme_classic()+
         theme(legend.position="none")+
         labs(x="", y="", title = colnames(data)[x])+
-        scale_fill_gdocs()+
+        stat_boxplot(geom="errorbar",width=0.2)+
         stat_compare_means(method="anova",aes(label=..p.signif..),hide.ns = TRUE)
     })
   }
   if(stat=="wilcox"){
     plot <- lapply(seq_len(ncol(data)), FUN = function(x) {
-      ggplot(data,aes(x = .data[[varx]], y = data[ , x],inheriet.aes=FALSE,fill=.data[[varx]],group=.data[[varx]])) +
+      ggplot(data,aes(x = .data[[varx]], y = data[ , x],inherit.aes=FALSE,fill=.data[[varx]],group=.data[[varx]])) +
         geom_boxplot()+
-        theme_few()+
+        theme_classic()+
         theme(legend.position="none")+
         labs(x="", y="", title = colnames(data)[x])+
-        scale_fill_gdocs()+
-        stat_compare_means(method="wilcox.test",aes(label=..p.signif..),hide.ns = TRUE)
+        stat_boxplot(geom="errorbar",width=0.2)+
+        stat_compare_means(method="wilcox.text",aes(label=..p.signif..),hide.ns = TRUE)
     })
   }
   if(stat=="kruskal"){
     plot <- lapply(seq_len(ncol(data)), FUN = function(x) {
-      ggplot(data,aes(x = .data[[varx]], y = data[ , x],inheriet.aes=FALSE,fill=.data[[varx]],group=.data[[varx]])) +
+      ggplot(data,aes(x = .data[[varx]], y = data[ , x],inherit.aes=FALSE,fill=.data[[varx]],group=.data[[varx]])) +
         geom_boxplot()+
-        theme_few()+
+        theme_classic()+
         theme(legend.position="none")+
         labs(x="", y="", title = colnames(data)[x])+
-        scale_fill_gdocs()+
-        stat_compare_means(method="kruskal.test",aes(label=..p.signif..),hide.ns = TRUE)
+        stat_boxplot(geom="errorbar",width=0.2)+
+        stat_compare_means(method="kruskal.text",aes(label=..p.signif..),hide.ns = TRUE)
     })
   }
-
-  #group_plotter function
-  group_plotter<-function(columns) {
-    data[data==0] <- NA
-    columns<-c(group,columns)
-    data<-select(data,all_of(columns))
-    metabolites<-names(data)
-    varx<-metabolites[1]
-
-    pltg<- lapply(seq_len(ncol(data)), FUN = function(x) {
-      ggplot(data,aes(x = .data[[varx]], y = data[ , x],inheriet.aes=FALSE,fill=.data[[varx]],group=.data[[varx]])) +
-        geom_boxplot()+
-        theme_few()+
-        theme(legend.position="none",axis.text.x=element_text(angle=45,hjust=1))+
-        labs(x="", y="", title = colnames(data)[x])+
-        scale_fill_gdocs()
-    })
-
-    pltg<-pltg[-1]
-    plot_combined<-ggarrange(plotlist=pltg)
-    plot<<-append(plot,list(plot_combined))
-    data<-data_original
-  }
-  #Main Parameters
-
-
-  if(is.element("Main Parameters",grouped)==TRUE){
-    columns<- c("tg_mg_dl","chol_mg_dl","ldl_chol_mg_dl","hdl_chol_mg_dl","apo_a1_mg_dl","apo_a2_mg_dl")
-    group_plotter(columns)
-  }
-
-  if(is.element("Main Fractions",grouped)==TRUE){
-    columns<- c("vldl_particles_nmol_l","idl_particles_nmol_l","ldl_particles_nmol_l")
-    group_plotter(columns)
-  }
-
-  #LDL-Subfractions----
-  if(is.element("LDL Fractions",grouped)==TRUE){
-    columns<- c("ldl_1_particles_nmol_l","ldl_2_particles_nmol_l","ldl_3_particles_nmol_l","ldl_4_particles_nmol_l","ldl_5_particles_nmol_l","ldl_6_particles_nmol_l")
-    group_plotter(columns)
-  }
-  #TGs----
-  if(is.element("TG Fractions",grouped)==TRUE){
-    columns<- c("tg_vldl_mg_dl","tg_idl_mg_dl","tg_ldl_mg_dl","tg_hdl_mg_dl")
-    group_plotter(columns)
-  }
-  #Chol----
-  if(is.element("CHOL Fractions",grouped)==TRUE){
-    columns<- c("chol_vldl_mg_dl","chol_idl_mg_dl")
-    group_plotter(columns)
-  }
-  #fchol----
-  if(is.element("fCHOL Fractions",grouped)==TRUE){
-    columns<- c("f_chol_vldl_mg_dl","f_chol_idl_mg_dl","f_chol_ldl_mg_dl","f_chol_hdl_mg_dl")
-    group_plotter(columns)
-  }
-  #phosl----
-  if(is.element("PHOSL Fractions",grouped)==TRUE){
-    columns<- c("phosl_vldl_mg_dl","phosl_idl_mg_dl","phosl_ldl_mg_dl","phosl_hdl_mg_dl")
-    group_plotter(columns)
-  }
-  #Apo----
-  if(is.element("APOA1 Fractions",grouped)==TRUE){
-    columns<- c("apo_a1_hdl_mg_dl","apo_a2_hdl_mg_dl","apo_b_vldl_mg_dl","apo_b_idl_mg_dl","apo_b_ldl_mg_dl")
-    group_plotter(columns)
-  }
-  #vldls----
-  if(is.element("TG VLDL",grouped)==TRUE){
-    columns<- c("tg_vldl_1_mg_dl","tg_vldl_2_mg_dl","tg_vldl_3_mg_dl","tg_vldl_4_mg_dl","tg_vldl_5_mg_dl")
-    group_plotter(columns)
-  }
-  if(is.element("CHOL VLDL",grouped)==TRUE){
-    columns<- c("chol_vldl_1_mg_dl","chol_vldl_2_mg_dl","chol_vldl_3_mg_dl","chol_vldl_4_mg_dl","chol_vldl_5_mg_dl")
-    group_plotter(columns)
-  }
-  if(is.element("fCHOL VLDL",grouped)==TRUE){
-    columns<- c("f_chol_vldl_1_mg_dl","f_chol_vldl_2_mg_dl","f_chol_vldl_3_mg_dl","f_chol_vldl_4_mg_dl","f_chol_vldl_5_mg_dl")
-    group_plotter(columns)
-  }
-  if(is.element("PHOSL VLDL",grouped)==TRUE){
-    columns<- c("phosl_vldl_1_mg_dl","phosl_vldl_2_mg_dl","phosl_vldl_3_mg_dl","phosl_vldl_4_mg_dl","phosl_vldl_5_mg_dl")
-    group_plotter(columns)
-  }
-  #ldls----
-  if(is.element("TG LDL",grouped)==TRUE){
-    columns<- c("tg_ldl_1_mg_dl","tg_ldl_2_mg_dl","tg_ldl_3_mg_dl","tg_ldl_4_mg_dl","tg_ldl_5_mg_dl","tg_ldl_6_mg_dl")
-    group_plotter(columns)
-  }
-  if(is.element("CHOL LDL",grouped)==TRUE){
-    columns<- c("chol_ldl_1_mg_dl","chol_ldl_2_mg_dl","chol_ldl_3_mg_dl","chol_ldl_4_mg_dl","chol_ldl_5_mg_dl","chol_ldl_6_mg_dl")
-    group_plotter(columns)
-  }
-  if(is.element("fCHOL LDL",grouped)==TRUE){
-    columns<- c("f_chol_ldl_1_mg_dl","f_chol_ldl_2_mg_dl","f_chol_ldl_3_mg_dl","f_chol_ldl_4_mg_dl","f_chol_ldl_5_mg_dl","f_chol_ldl_6_mg_dl")
-    group_plotter(columns)
-  }
-  if(is.element("PHOSL LDL",grouped)==TRUE){
-    columns<- c("phosl_ldl_1_mg_dl","phosl_ldl_2_mg_dl","phosl_ldl_3_mg_dl","phosl_ldl_4_mg_dl","phosl_ldl_5_mg_dl","phosl_ldl_6_mg_dl")
-    group_plotter(columns)
-  }
-  if(is.element("APOB LDL",grouped)==TRUE){
-    columns<- c("apo_b_ldl_1_mg_dl","apo_b_ldl_2_mg_dl","apo_b_ldl_3_mg_dl","apo_b_ldl_4_mg_dl","apo_b_ldl_5_mg_dl","apo_b_ldl_6_mg_dl")
-    group_plotter(columns)
-  }
-  #hdls-----
-  if(is.element("TG HDL",grouped)==TRUE){
-    columns<- c("tg_hdl_1_mg_dl","tg_hdl_2_mg_dl","tg_hdl_3_mg_dl","tg_hdl_4_mg_dl")
-    group_plotter(columns)
-  }
-  if(is.element("CHOL HDL",grouped)==TRUE){
-    columns<- c("chol_hdl_1_mg_dl","chol_hdl_2_mg_dl","chol_hdl_3_mg_dl","chol_hdl_4_mg_dl")
-    group_plotter(columns)
-  }
-  if(is.element("fCHOL HDL",grouped)==TRUE){
-    columns<- c("f_chol_hdl_1_mg_dl","f_chol_hdl_2_mg_dl","f_chol_hdl_3_mg_dl","f_chol_hdl_4_mg_dl")
-    group_plotter(columns)
-  }
-  if(is.element("PHOSL HDL",grouped)==TRUE){
-    columns<- c("phosl_hdl_1_mg_dl","phosl_hdl_2_mg_dl","phosl_hdl_3_mg_dl","phosl_hdl_4_mg_dl")
-    group_plotter(columns)
-  }
-  if(is.element("APOA1 HDL",grouped)==TRUE){
-    columns<- c("apo_a1_hdl_1_mg_dl","apo_a1_hdl_2_mg_dl","apo_a1_hdl_3_mg_dl","apo_a1_hdl_4_mg_dl")
-    group_plotter(columns)
-  }
-  if(is.element("APOA2 HDL",grouped)==TRUE){
-    columns<- c("apo_a2_hdl_1_mg_dl","apo_a2_hdl_2_mg_dl","apo_a2_hdl_3_mg_dl","apo_a2_hdl_4_mg_dl")
-    group_plotter(columns)
-  }
-  #others----
-  if(is.element("Ratios",grouped)==TRUE){
-    columns<- c("ldl_chol_hdl_chol","apo_b100_apo_a1")
-    group_plotter(columns)
-  }
-
+  
   metabolites<-metabolites[-1]
   plot<-plot[-1]
   plot<-plot
-
+  
 }
 #SCRIPT Normalizer----
 normalizor<- function(data,log,center){
@@ -684,7 +561,7 @@ excel_creator<-function(data,solvent,size,rack,experiments,path){
   # data_final<-sort(data_final$dataorder)
   # data_final=subset(data_final,select=-c(dataorder))
   data_final<-data_final[,c(1,2,3,6,4,5)]
-  data_final<<-data_final
+  data_final<-data_final
 }
 #SCRIPT Extractor----
 clean_csv<-function(names,data){
@@ -1155,19 +1032,26 @@ app_ui <-dashboardPage(
   dashboardHeader(title="MoonNMR"),
   dashboardSidebar(
      sidebarMenu(collapsed=FALSE,
-              menuItem("Home", tabName = "home", icon = icon("home"),selected=T),
-              menuItem("Preparation",icon=icon("dolly"),
-                      menuSubItem("IVDr Upload", tabName = "creator", icon = icon("truck")),
-                      menuSubItem("IVDr Manual", tabName = "manual", icon = icon("people-carry")),
-                      menuSubItem("ICON Upload", tabName = "iconup", icon = icon("car-side")),
-                      menuSubItem("ICON Manual", tabName = "iconman", icon = icon("wrench"))),
-              menuItem("Processing", icon=icon("bacon"),
-                       menuSubItem("XML Extractor", tabName = "xml", icon = icon("file-import")),
-                       menuSubItem("Bruker File Extractor", tabName = "extractor", icon = icon("crow")),
-                       menuSubItem("Table Combiner",tabName="combiner",icon=icon("handshake"))),
-              menuItem("Analysis",icon=icon("flask"),
-                       menuSubItem("Normalize", tabName = "normalizer", icon = icon("balance-scale-right")),
-                       menuSubItem("Plots", tabName = "plots", icon = icon("chart-bar")))
+                 menuItem("Home", tabName = "home", icon = icon("home"),selected=T),
+                 menuItem("Preparation",icon=icon("dolly"),
+                          menuSubItem("IVDr Upload", tabName = "creator", icon = icon("truck")),
+                          menuSubItem("IVDr Manual", tabName = "manual", icon = icon("people-carry")),
+                          menuSubItem("ICON Upload", tabName = "iconup", icon = icon("car-side")),
+                          menuSubItem("ICON Manual", tabName = "iconman", icon = icon("wrench"))
+                 ),
+                 menuItem("Extraction", icon=icon("bacon"),
+                          menuSubItem("XML", tabName = "xml", icon = icon("file-import")),
+                          menuSubItem("Bruker File", tabName = "extractor", icon = icon("crow"))
+                 ),
+                 menuItem("Processing", icon=icon("table"),
+                          menuSubItem("Delete",tabName="deleter",icon=icon("trash")),
+                          menuSubItem("Combine",tabName="combiner",icon=icon("handshake"))
+                 ),
+                 menuItem("Analysis",icon=icon("flask"),
+                          menuSubItem("Normalize", tabName = "normalizer", icon = icon("balance-scale-right")),
+                          menuSubItem("Bar Plots", tabName = "plots", icon = icon("chart-bar")),
+                          menuSubItem("PCA", tabName = "pca", icon = icon("chart-area"))
+                 )
     )
   ),
   dashboardBody(
@@ -1230,14 +1114,16 @@ app_ui <-dashboardPage(
                 fluidRow(
                   column(width=4,
                   box(width=12,
-                    h1("MoonNMR - Shiny Edition"),
-                    h3(HTML("<b>M</b>etabol<b>O</b>mics <b>O</b>rga<b>N</b>iser NMR")),
-                    p("Tools for high-throughput NMR and untargeted Metabolomics"),
-                    p("No data is kept on the server, if you prefer to use the application locally check it out as a package on",a("GitHub.",href="https://github.com/funkam/MoonNMR")),
+                    h1("MoonNMR - Local Edition"),
+                    #img(src="https://user-images.githubusercontent.com/88379260/157672281-8f3902d3-998e-48cc-a445-25dc17a42fa5.png", height="20%",width="20%",align="left"),
+                    h3(HTML("<b>M</b>etabol<b>O</b>mics <b>O</b>rga<b>N</b>iser NMR"),align="left"),
+                    p("Tools for high-throughput NMR and untargeted Metabolomics",align="left"),
+                    br(),
+                    p("This is the local version of MoonNMR for the online version",a("click here",href="https://funkam.shinyapps.io/MoonShiny/")),
                     br(),
                     p("Developed by",a("Alexander Funk",href="https://www.uniklinikum-dresden.de/de/das-klinikum/kliniken-polikliniken-institute/klinische-chemie-und-laboratoriumsmedizin/forschung/copy_of_EMS")),
                     p("Institute for Clinical Chemistry and Laboratory Medicine"),
-                    p("University Hospital Dresden, Fetscherstr. 74, 01307 Dresden"),
+                    p("University Hospital Dresden, Fetscherstr. 74, 01307 Dresden")
                   ),
                   tabBox(width=12,title="Tools",
                          tabPanel(title="Preparation",
@@ -1501,6 +1387,74 @@ app_ui <-dashboardPage(
                   )
                   )
           ),
+      #deleter----
+      tabItem(tabName = "deleter",
+              fluidRow(
+                box(width=3,title="Upload data:",status="primary",solidHeader=TRUE,
+                    radioGroupButtons("del_file_type_Input","Choose File type",
+                                      choices = list(".csv/txt" = 1, ".xlsx" = 2),
+                                      selected = 1
+                    ),
+                    fileInput("del_file", "File input", multiple=FALSE),
+                ),
+                box(width=4,title="Options:",status="primary",solidHeader=TRUE,
+                    p("Select type:"),
+                    tabBox(width=12,selected="Parameter",
+                           tabPanel("Parameter",
+                                    pickerInput("del_column", "Choose parameters (columns) to delete",
+                                                choices=c(),
+                                                options=list("actions-box"=TRUE, size=15,`selected-text-format` = "count > 3"
+                                                ),multiple=TRUE
+                                    )
+                           ),
+                           tabPanel("Sample",
+                                    pickerInput("del_irow", "Choose identifier column (e.g. SampleID)",
+                                                choices=c(""),
+                                                options=list("actions-box"=TRUE, size=15,`selected-text-format` = "count > 3"
+                                                ),multiple=FALSE
+                                    ),
+                                    pickerInput("del_row", "Choose samples (rows) to delete",
+                                                choices=c(),
+                                                options=list("actions-box"=TRUE, size=15,`selected-text-format` = "count > 3"
+                                                ),multiple=TRUE
+                                    )
+                                    
+                           ),
+                           tabPanel("Group",
+                                    pickerInput("del_igroup", "Choose identifier column (e.g. Group)",
+                                                choices=c(),
+                                                options=list("actions-box"=TRUE, size=15,`selected-text-format` = "count > 3"
+                                                ),multiple=FALSE
+                                    ),
+                                    pickerInput("del_group", "Choose groups to delete",
+                                                choices=c(),
+                                                options=list("actions-box"=TRUE, size=15,`selected-text-format` = "count > 3"
+                                                ),multiple=TRUE
+                                    )
+                           )
+                    )
+                ),
+                box(width=2,title="Download:",status="primary",solidHeader=TRUE,
+                    downloadButton("del_downloader","Download table"),
+                ),
+                box(width=5, background="black",
+                    p("Upload a data table and edit the parameters, samples and groups interactively.",style="color:yellow"),
+                    p("Multiple edits possible at the same time.",style="color:yellow")
+                    
+                )
+              ),
+              
+              fluidRow(
+                box(width=12, title="Output",status="primary",solidHeader=TRUE,
+                    div(style = 'overflow-x: scroll',  DT::dataTableOutput('del_table'))
+                )
+              )
+              
+      ),
+      
+      
+      
+      
       #Combiner-----
       tabItem(tabName="combiner",
               fluidRow(
@@ -1608,7 +1562,10 @@ app_ui <-dashboardPage(
                                        choices=c(),
                                        options=list("actions-box"=TRUE, size=15,`selected-text-format` = "count > 3"
                                        ),
-                                       multiple=TRUE)
+                                       multiple=TRUE),
+                           hr(),
+                           shinyjqui::orderInput("p_groupsorter","Drag to re-order groups/timepoints",
+                                      items=c())
                        )
                 ),
                 column(width=4,
@@ -1616,51 +1573,85 @@ app_ui <-dashboardPage(
                          box(width=12,title="Chose plot Options:",status="primary",solidHeader=TRUE,
                              radioGroupButtons("p_stat","Statistics",
                                                choices=c("None"="p_none","t-test"="p_ttest","Wilcoxon"="p_wilc","Anova"="p_anova","Kruskal-Wallis"="p_krusk"),
-                                               selected="p_none",individual=TRUE),
+                                               selected="p_none",individual=TRUE)
                          )
                        ),
                        fluidRow(
-                         box(width=6,title="Grouped plot options:",status="primary",solidHeader=TRUE,
-                             pickerInput("p_grouped", "Select prearranged groups:",
-                                         choices=list(Main=list("Main Parameters","Main Fractions","LDL Fractions","TG Fractions","CHOL Fractions","fCHOL Fractions","PHOSL Fractions","APOA1 Fractions"),
-                                                      VLDL=list("TG VLDL","CHOL VLDL","fCHOL VLDL","PHOSL VLDL"),
-                                                      LDL=list("TG LDL","CHOL LDL","fCHOL LDL","PHOSL LDL","APOB LDL"),
-                                                      HDL=list("TG HDL","CHOL HDL","fCHOL HDL","PHOSL HDL","APOA1 HDL","APOA2 HDL"),
-                                                      others=list("Ratios")),
-                                         options=list("actions-box"=TRUE, size=15,`selected-text-format` = "count > 3"
-                                         ),
-                                         multiple=TRUE)
-                         ),
-                         box(width=6,title="Download:",status="primary",solidHeader=TRUE,
-                             useWaiter(),
-                             downloadButton("p_downloader","Individual Plots as PDF")
-                         )
-                       ),
-                       fluidRow(
-                         box(width=12, background="black",color="yellow",
+                         box(width=12, background="black",
                              p("Individual plots are shown on the right, only one at a time.",style="color:yellow"),
                              p("Statistical significance is highlighted in the plots by *.",style="color:yellow"),
-                             p("When multiple plots are selected it is possible to download them via the Download Button",style="color:yellow"),
-                             p("Lipidomic Subclasses can be grouped and are then included in PDF.",style="color:yellow")
+                             p("Interactive single plot on the right does not show significance.",style="color:yellow")
+                             
                          )
-
+                       ),
+                       fluidRow(
+                         box(width=12,title="Download:",status="primary",solidHeader=TRUE,
+                             useWaiter(),
+                             h5("Download a single or multiple individual plots as .PDF or a small selection of different parameters in a grouped plot (as .tiff)"),
+                             hr(),
+                             downloadButton("p_downloader","PDF"),
+                             downloadButton("p_downloader_groups","Grouped")
+                         )
                        )
                 ),
                 column(width=5,
                        box(width=12, status="primary",solidHeader=TRUE,title="Single plot display",
-                           plotlyOutput(width="90%","p_single")
+                           plotlyOutput("p_single"),
+                           textOutput("p_text"),
+                           textOutput("p_text2")
                        )
                 )
               ),
-
-
               fluidRow(
                 box(width=12, status="primary",solidHeader=TRUE,title="Data Table Overview",
                     div(style = 'overflow-x: scroll',DT::dataTableOutput("p_exampletable"))
                 )
               )
-
-
+      ),
+      
+    #PCA----
+      tabItem(tabName="pca",
+              h2("Principal Component Analysis"),
+              fluidRow(
+                box(width=3,title="Upload data:",status="primary",solidHeader=TRUE,
+                    radioGroupButtons("pca_file_type_Input","Choose File type",
+                                      choices = list(".csv/txt" = 1, ".xlsx" = 2),
+                                      selected = 1
+                    ),
+                    fileInput("pca_file", "File input", multiple=FALSE),
+                    pickerInput("pca_id", "Select Sample ID column",
+                                choices=c(),
+                                options=list("actions-box"=TRUE, size=15,`selected-text-format` = "count > 3"
+                                ),
+                                multiple=FALSE,selected=c()),
+                    pickerInput("pca_group", "Select Group column",
+                                choices=c(),
+                                options=list("actions-box"=TRUE, size=15,`selected-text-format` = "count > 3"
+                                ),
+                                multiple=FALSE,selected=NULL),
+                    radioGroupButtons("pca_labels","Include labels in plot",
+                                      choices=c("Yes"="pca_labels_yes","No"="pca_labels_no"),
+                                      selected="pca_labels_no"),
+                    hr(),
+                    downloadButton("pca_download","Download PCA table")
+                ),
+                tabBox(width=9,selected="Data Table",
+                       tabPanel("Data Table",
+                                div(style = 'overflow-x: scroll',DT::dataTableOutput("pca_table"))
+                       ),
+                       tabPanel("PCA",
+                                div(style = 'overflow-x: scroll',DT::dataTableOutput("pca_pca"))
+                       )
+                )
+              ),
+              fluidRow(
+                box(width=6, status="primary",solidHeader=TRUE,title="PCA Scores",
+                    plotlyOutput(width="90%","pca_scores")
+                ),
+                box(width=6, status="primary",solidHeader=TRUE,title="PCA Biplot",
+                    plotlyOutput(width="90%","pca_biplot")
+                )
+              )
       )
   )
   )
@@ -1672,13 +1663,11 @@ app_ui <-dashboardPage(
 
 
 # Server----
-app_server <- function(input, output,session) {
+app_server <- function(input,output,session) {
 
 #Server Home----
   #create reactive archive, ->in excel tabs
-  archive<-reactive({read.csv("archive/archive.csv")})
-  #archiveoutptut
-
+  archive<-reactive({read.csv("archive.csv")})
   #Output
   output$archive<-DT::renderDataTable(archive())
   #output archive plots
@@ -1749,8 +1738,8 @@ app_server <- function(input, output,session) {
     new_archive<-rbind(archive_current,archive_updated)
   })
   observeEvent(input$archive, {
-    write.csv(archive(),"archive/archive_backup.csv",row.names=FALSE)
-    write.csv(archive_add(),"archive/archive.csv",row.names=FALSE)
+    write.csv(archive(),"archive_backup.csv",row.names=FALSE)
+    write.csv(archive_add(),"archive.csv",row.names=FALSE)
     showModal(modalDialog(
       title = "Important message",
       "The samples have been added to the archive."
@@ -1792,7 +1781,7 @@ app_server <- function(input, output,session) {
           m_path<-reactive({input$m_path})
           m_experiments<-reactive({input$m_experiment})
           m_project<-reactive({input$m_project})
-          m_archive<-reactive({read.csv("archive/archive.csv")})
+          m_archive<-reactive({read.csv("archive.csv")})
 
 
           m_elementpicker<-reactive({
@@ -1849,8 +1838,8 @@ app_server <- function(input, output,session) {
             } else {
               updateNumericInput(session, "m_slot", value = m_slot_counter)
             }
-            write.csv(m_archive(),"archive/archive_backup.csv",row.names=FALSE)
-            write.csv(m_archive_add(),"archive/archive.csv",row.names=FALSE)
+            write.csv(m_archive(),"archive_backup.csv",row.names=FALSE)
+            write.csv(m_archive_add(),"archive.csv",row.names=FALSE)
             m_looper<<-rbind(m_looper,manual_samples())
           })
           m_archive_add<-reactive({
@@ -1869,8 +1858,8 @@ app_server <- function(input, output,session) {
               }
             )
              observeEvent(input$m_archive, {
-               write.csv(m_archive(),"archive/archive_backup.csv",row.names=FALSE)
-               write.csv(m_archive_add(),"archive/archive.csv",row.names=FALSE)
+               write.csv(m_archive(),"archive_backup.csv",row.names=FALSE)
+               write.csv(m_archive_add(),"archive.csv",row.names=FALSE)
                showModal(modalDialog(
                  title = "Important message",
                  "The samples have been added to the archive."
@@ -1884,7 +1873,7 @@ app_server <- function(input, output,session) {
              i_path<-reactive({input$i_path})
              i_experiments<-reactive({input$i_experiment})
              i_project<-reactive({input$project})
-             i_archive<-reactive({read.csv("archive/archive.csv")})
+             i_archive<-reactive({read.csv("archive.csv")})
 
 
 
@@ -1952,8 +1941,8 @@ app_server <- function(input, output,session) {
                new_archive<-rbind(archive_current,archive_updated)
              })
              observeEvent(input$i_archive, {
-               write.csv(i_archive(),"archive/archive_backup.csv",row.names=FALSE)
-               write.csv(i_archive_add(),"archive/archive.csv",row.names=FALSE)
+               write.csv(i_archive(),"archive_backup.csv",row.names=FALSE)
+               write.csv(i_archive_add(),"archive.csv",row.names=FALSE)
                showModal(modalDialog(
                  title = "Important message",
                  "The samples have been added to the archive."
@@ -1982,7 +1971,7 @@ app_server <- function(input, output,session) {
              im_path<-reactive({input$im_path})
              im_experiments<-reactive({input$im_experiment})
              im_project<-reactive({input$im_project})
-             im_archive<-reactive({read.csv("archive/archive.csv")})
+             im_archive<-reactive({read.csv("archive.csv")})
 
              im_experimentlist<-reactive({
                inFile <- input$im_file2
@@ -2048,8 +2037,8 @@ app_server <- function(input, output,session) {
                } else {
                  updateNumericInput(session, "im_slot", value = im_slot_counter)
                }
-               write.csv(im_archive(),"archive/archive_backup.csv",row.names=FALSE)
-               write.csv(im_archive_add(),"archive/archive.csv",row.names=FALSE)
+               write.csv(im_archive(),"archive_backup.csv",row.names=FALSE)
+               write.csv(im_archive_add(),"archive.csv",row.names=FALSE)
                im_looper<<-rbind(im_looper,im_manual_samples())
              })
 
@@ -2146,7 +2135,124 @@ app_server <- function(input, output,session) {
               write.csv(cleaned_csv(), file, row.names = FALSE)
             }
           )
-          #Server Combiner----
+#Server Deleter----
+          del_file <- reactive({
+            del_inFile <- input$del_file
+            if (is.null(del_inFile))
+              return(NULL)
+            if (input$del_file_type_Input == "1") {
+              read.csv(del_inFile$datapath,
+                                   header = TRUE,
+                                   stringsAsFactors = FALSE)
+            } else {
+              read.xlsx(del_inFile$datapath)
+            }
+          })
+          
+          del_columns<-reactive({input$del_column})
+          del_rows<-reactive({input$del_row})
+          del_irows<-reactive({input$del_irow})
+          del_groups<-reactive({input$del_group})
+          del_igroups<-reactive({input$del_igroup})
+          samplerows<-reactive({
+            req(del_irows())
+            dat<-subset(del_file(),select=names(del_file()) %in% del_irows())
+          })
+          grouprows<-reactive({
+            req(del_igroups())
+            dat<-subset(del_file(),select=names(del_file()) %in% del_igroups())
+            dat<-unique(dat)
+          })
+          #update picks
+          
+          del_column<-observe({
+            updatePickerInput(
+              session,
+              "del_column",
+              choices = names(del_file())
+              
+            )
+          })
+          del_irow<-observe({
+            updatePickerInput(
+              session,
+              "del_irow",
+              choices = names(del_file())
+              
+            )
+          })
+          del_row<-observe({
+            req(input$del_file)
+            req(del_irows())
+            
+            updatePickerInput(
+              session,
+              "del_row",
+              choices = samplerows()
+              
+            )
+          })
+          del_igroup<-observe({
+            updatePickerInput(
+              session,
+              "del_igroup",
+              choices = names(del_file())
+              
+            )
+          })
+          del_group<-observe({
+            req(input$del_file)
+            req(del_igroups())
+            updatePickerInput(
+              session,
+              "del_group",
+              choices = grouprows()
+            )
+          })
+          # del_table<-reactive({
+          #   req(input$del_file)
+          #
+          #   if(length(del_columns()!=0)){
+          #     "%ni%"<-Negate('%in%')
+          #     del_final<-subset(del_file(),select=names(del_file()) %ni% del_columns())
+          #   }
+          
+          
+          # })
+          del_table<-reactive({
+            req(input$del_file)
+            del_final<-del_file()
+            if(sjmisc::is_empty(del_columns())==FALSE){
+              "%ni%"<-Negate('%in%')
+              del_final<-subset(del_final,select=names(del_final) %ni% del_columns())
+            }
+            if(sjmisc::is_empty(del_rows())==FALSE){
+              irows<-as.name(del_irows())
+              rows<-paste(del_rows(),collapse="|")
+              del_final<-del_final %>% filter(!str_detect(!!as.symbol(irows),rows))
+            }
+            if(sjmisc::is_empty(del_groups())==FALSE){
+              igroup<-as.name(del_igroups())
+              group<-del_groups()
+              del_final<-del_final %>% filter(!str_detect(!!as.symbol(igroup),group))
+            }
+            del_final<-del_final
+          })
+          
+          #output
+          output$del_table<-DT::renderDataTable(del_table())
+          
+          
+          output$del_downloader <- downloadHandler(
+            filename = function() {
+              paste("Data_", ".csv", sep = "")
+            },
+            content = function(file) {
+              write.csv(del_table(), file, row.names = FALSE)
+            }
+          )
+          
+#Server Combiner----
           c_fileleft <- reactive({
             inFilel <- input$c_fileleft
             if (is.null(inFilel))
@@ -2265,35 +2371,41 @@ app_server <- function(input, output,session) {
         })
         output$n_histogramm<-renderPlotly({
           req(input$n_file)
-          ggplot(n_plotters(),aes(x=value,fill=cut(value,100)))+geom_histogram()+theme_few()+xlab("")+ylab("")+theme(legend.position = "none")
+          ggplot(n_plotters(),aes(x=value,fill=cut(value,100)))+geom_histogram()+theme_classic()+xlab("")+ylab("")+theme(legend.position = "none")
         })
         output$n_distribution<-renderPlotly({
           req(input$n_file)
-          ggplot(n_plotters(),aes(x = value, y=variable, color=variable))+geom_line(size=3)+theme_few()+theme(legend.position = "none",axis.text.y = element_text(size=10))+xlab("")+ylab("")
+          ggplot(n_plotters(),aes(x = value, y=variable, color=variable))+geom_line(size=3)+theme_classic()+theme(legend.position = "none",axis.text.y = element_text(size=10))+xlab("")+ylab("")
 
         })
 
 #Server Plotting Tab----
         #input
         p_file <- reactive({
-           inFile <- input$p_file
-           if (is.null(inFile))
-             return(NULL)
-           if (input$p_file_type_Input == "1") {
-             clean_names(read.csv(inFile$datapath,
-                      header = TRUE,
-                      stringsAsFactors = FALSE))
-           } else {
-             clean_names(read.xlsx(inFile$datapath))
-           }
-         })
-
+          inFile <- input$p_file
+          if (is.null(inFile))
+            return(NULL)
+          if (input$p_file_type_Input == "1") {
+            read.csv(inFile$datapath,
+                                 header = TRUE,
+                                 stringsAsFactors = FALSE)
+          } else {
+            read.xlsx(inFile$datapath)
+          }
+        })
+        p_groupsorters<-reactive({input$p_groupsorter})
         p_columns<-reactive({input$p_column})
         p_groups<-reactive({input$p_group})
+        p_grouped<-reactive({switch(input$p_grouped, "p_grouped_yes"="Yes","p_grouped_no"="No")})
+        
         p_stat<-reactive({switch(input$p_stat,"p_none"="none","p_ttest"="ttest","p_wilc"="wilcox","p_anova"="anova","p_krusk"="kruskal")})
-
-        p_grouped<-reactive({input$p_grouped})
-
+        
+        p_uniquegroups<-reactive({
+          req(p_file(),p_groups())
+          pdat<-subset(p_file(),select=names(p_file()) %in% p_groups())
+          pdat<-unique(pdat)
+          pdat<-pdat[[p_groups()]]
+        })
         #update picks
         p_column<-observe({
           updatePickerInput(
@@ -2301,7 +2413,7 @@ app_server <- function(input, output,session) {
             "p_column",
             choices = names(p_file())
           )
-          })
+        })
         p_group<-observe({
           updatePickerInput(
             session,
@@ -2309,35 +2421,155 @@ app_server <- function(input, output,session) {
             choices = names(p_file())
           )
         })
-    #outputs
-         output$p_exampletable<-renderDataTable({
-           req(input$p_file)
-           p_file()
-         })
+        p_groupsorter<-observe({
+          shinyjqui::updateOrderInput(
+            session,
+            "p_groupsorter",
+            items = p_uniquegroups()
+          )
+        })
+        p_filesorted<-reactive({
+          req(p_groups(),p_file(),p_groupsorters())
+          p_groups<-as.symbol(p_groups())
+          p_groupsorters<-p_groupsorters()
+          p_file2<-p_file()
+          p_file2<-mutate(p_file2, !!p_groups := !!p_groups %>% factor(levels = p_groupsorters))
+        })
+        p_singleplotter<-reactive({
+          req(p_filesorted())
+          plotter_single(p_filesorted(),p_groups(),p_columns(),p_stat())
+        })
 
-         output$p_single <- renderPlotly({
-           req(input$p_file,input$p_column)
-           p_plot_single<-plotter_single(p_file(),p_groups(),p_columns(),p_grouped(),p_stat())
-         })
-          output$p_downloader <- downloadHandler(
-            filename = "Plots_Summary.pdf",
+        
+        #outputs
+        output$p_exampletable<-DT::renderDataTable({
+          req(input$p_file)
+          p_file()
+        })
 
+        output$p_single <- renderPlotly({
+          req(input$p_file,input$p_column)
+          p_singleplotter()
+        })
+        output$p_downloader_groups <- downloadHandler(
+          filename = "Grouped.tiff",
+          content = function(file) {
+            p_plot<-plotter_grouped(p_filesorted(),p_groups(),p_columns(),p_stat())
+            tiff(file)
+            print(p_plot)
+            dev.off()
+          })
+        output$p_downloader <- downloadHandler(
+          filename = "Plots_Summary.pdf",
+          
+          content = function(file) {
+            waiter_show(html=waiting_screen,color=transparent(0.9))
+            
+            p_data<-p_filesorted()
+            p_plot<-plotter_v2(p_data,p_groups(),p_columns(),p_stat())
+            pdf(file)
+            print(p_plot)
+            dev.off()
+            waiter_hide()
+            sendSweetAlert(
+              session = session,
+              title = "Success!",
+              text = "Plots generated!",
+              type = "success"
+            )
+          })
+
+#server PCA----
+          pca_file <- reactive({
+            inFile <- input$pca_file
+            if (is.null(inFile))
+              return(NULL)
+            if (input$p_file_type_Input == "1") {
+              read.csv(inFile$datapath,
+                                   header = TRUE,
+                                   stringsAsFactors = FALSE)
+            } else {
+              read.xlsx(inFile$datapath)
+            }
+          })
+          pca_ids<-reactive({input$pca_id})
+          pca_labels<-reactive({switch(input$pca_labels, "pca_labels_yes"="Yes","pca_labels_no"="No")})
+          
+          pca_groups<-reactive({input$pca_group})
+          #update picks
+          pca_group<-observe({
+            updatePickerInput(
+              session,
+              "pca_group",
+              choices = names(pca_file())
+            )
+          })
+          pca_id<-observe({
+            updatePickerInput(
+              session,
+              "pca_id",
+              choices = names(pca_file())
+            )
+          })
+          #pccomp
+          pca_calc<-reactive({
+            pca_data<-pca_file()
+            idloc<-grep(pca_ids(),colnames(pca_data))
+            row.names(pca_data)<-pca_data[,idloc]
+            pca_data<-pca_data[-idloc]
+            #pca_columns<-c(pca_groups(),pca_columns())
+            #pca_data<-select(pca_data,all_of(pca_columns()))
+            pca_data[pca_data==0]<-NA
+            nums<-unlist(lapply(pca_data,is.numeric))
+            pca_obj<-prcomp(pca_data[,nums],center=TRUE,scale.=TRUE)
+          })
+          pca_table<-reactive({
+            req(input$pca_file)
+            pca<-fortify(pca_calc(),data=pca_file())
+            dfcols<-ncol(pca_file())
+            pca<-pca[,-(1:dfcols),drop=FALSE]
+            pca = pca %>% `rownames<-`( NULL )
+          })
+          
+          
+          #pca_score
+          output$pca_scores<-renderPlotly({
+            req(input$pca_file,input$pca_id,input$pca_group)
+            if(pca_labels()=="Yes"){
+              pca_scores<-autoplot(pca_calc(), data=pca_file(),colour=pca_groups(),frame=TRUE,frame.type="norm",size=2,label=TRUE)+theme_classic()+theme(legend.position="bottom")
+            } else {
+              pca_scores<-autoplot(pca_calc(), data=pca_file(),colour=pca_groups(),frame=TRUE,frame.type="norm",size=2)+theme_classic()+theme(legend.position="bottom")
+            }
+            ggplotly(pca_scores) %>%
+              layout(showlegend = TRUE, legend = list(font = list(size = 15)))
+          })
+          
+          
+          #pca_biplot
+          output$pca_biplot<-renderPlotly({
+            req(input$pca_file,input$pca_id,input$pca_group)
+            pca_biplot<-autoplot(pca_calc(), data=pca_file(),colour=pca_groups(),loadings=TRUE,loadings.label=TRUE,loadings.label.size=3)+theme_classic()+theme(legend.position="none")
+            ggplotly(pca_biplot) %>%
+              layout(showlegend = TRUE, legend = list(font = list(size = 15)))
+          })
+          output$pca_table<-DT::renderDataTable({
+            req(input$pca_file)
+            pca_file()
+          })
+          output$pca_pca<-DT::renderDataTable({
+            req(input$pca_file)
+            pca_table()
+            #row.names(pca)<-NULL
+          })
+          output$pca_download <- downloadHandler(
+            filename = function() {
+              paste("PCA_", ".csv", sep = "")
+            },
             content = function(file) {
-              waiter_show(html=waiting_screen,color=transparent(0.9))
-
-              p_data<-p_file()
-              p_plot<<-plotter_v2(p_data,p_groups(),p_columns(),p_grouped(),p_stat())
-              pdf(file)
-              print(p_plot)
-              dev.off()
-              waiter_hide()
-              sendSweetAlert(
-                session = session,
-                title = "Success!",
-                text = "Plots generated!",
-                type = "success"
-              )
-              })
+              write.csv(pca_table(), file, row.names = FALSE)
+            }
+          )
+          
 }
 
 # Run the app ----
