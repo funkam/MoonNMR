@@ -1,6 +1,6 @@
 Package: MoonNMR
 Title: Tools for high-throughput NMR
-Version: 1.1.0
+Version: 1.1.1
 Authors@R: person('Alexander', 'Funk', email = 'alexander.funk@ukdd.de', role = c('cre', 'aut'))
 Description: PKG_DESC.
 License: MIT + file LICENSE
