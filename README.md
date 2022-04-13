@@ -17,10 +17,10 @@ library(devtools)
 devtools::install_github("funkam/MoonNMR",build = TRUE, build_vignettes = TRUE)
 ```
 
-#### Option 2: Download .tar.gz [here](https://drive.google.com/file/d/1iAUxgL9HdxZ7EBpT8dv8WB1tFJFtOCJe/view?usp=sharing)
+#### Option 2: Download .tar.gz [here](https://drive.google.com/file/d/1mm_5oNZlgQsQgISwC4KD7OKvrnR0gjLB/view?usp=sharing)
 ```
 Use R Studio or
-R CMD INSTALL MoonNMR_1.1.0.tar.gz
+R CMD INSTALL MoonNMR_1.1.2.tar.gz
 ```
 
 ---
