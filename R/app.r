@@ -6,7 +6,7 @@
 #' @importFrom WriteXLS WriteXLS
 #' @importFrom openxlsx read.xlsx
 #' @importFrom stringr str_c str_detect
-#' @importFrom janitor clean_names
+#' @importFrom janitor clean_names remove_constant
 #' @importFrom stats prcomp
 #' @importFrom utils read.csv read.csv2 unzip write.csv
 #' @importFrom grDevices dev.off pdf
@@ -2513,16 +2513,26 @@ app_server <- function(input,output,session) {
           })
           #pccomp
           pca_calc<-reactive({
+            req(pca_ids())
             pca_data<-pca_file()
+            #put sampleid as rownames for labels
             idloc<-grep(pca_ids(),colnames(pca_data))
             row.names(pca_data)<-pca_data[,idloc]
+            #remove sampleids
             pca_data<-pca_data[-idloc]
-            #pca_columns<-c(pca_groups(),pca_columns())
-            #pca_data<-select(pca_data,all_of(pca_columns()))
             pca_data[pca_data==0]<-NA
+            #remove empty columns
+            empty_columns<-colSums(is.na(pca_data) | pca_data == "") == nrow(pca_data)
+            pca_data<-pca_data[, !empty_columns]
+            #replace NA with min per column
+            pca_data<-pca_data %>%mutate_if(is.numeric,function(x) ifelse(is.na(x),min(x,na.rm=T),x))
+            #remove constants
+            pca_data<-remove_constant(pca_data)
+            #pca
             nums<-unlist(lapply(pca_data,is.numeric))
             pca_obj<-prcomp(pca_data[,nums],center=TRUE,scale.=TRUE)
           })
+          
           pca_table<-reactive({
             req(input$pca_file)
             pca<-fortify(pca_calc(),data=pca_file())
